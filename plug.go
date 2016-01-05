@@ -1,4 +1,4 @@
-package plug
+package main
 
 import (
 	"golang.org/x/tools/go/vcs"
@@ -6,15 +6,20 @@ import (
 	"path/filepath"
 )
 
+type Plum struct {
+	repos string
+	plugs map[string]*Plug
+}
+
 type Plug struct {
 	dir  string
 	rev  string
 	repo string
+	do   string
 	on   []string
-	use  []string
+	in   []string
 	of   []string
 	at   []string
-	do   string
 }
 
 func (p *Plug) Sync() error {
