@@ -13,13 +13,12 @@ type Plum struct {
 
 type Plug struct {
 	dir  string
-	rev  string
 	repo string
+	at   string
 	do   string
 	on   []string
 	in   []string
 	of   []string
-	at   []string
 }
 
 func (p *Plug) Sync() error {
@@ -72,7 +71,7 @@ func (p *Plug) install() error {
 		return err
 	}
 
-	return r.VCS.CreateAtRev(dir, r.Repo, p.rev)
+	return r.VCS.CreateAtRev(dir, r.Repo, p.at)
 }
 
 func (p *Plug) update() error {
@@ -84,7 +83,7 @@ func (p *Plug) update() error {
 
 	dir := p.getPath("")
 
-	if err := r.VCS.TagSync(dir, p.rev); err != nil {
+	if err := r.VCS.TagSync(dir, p.at); err != nil {
 		return err
 	}
 
