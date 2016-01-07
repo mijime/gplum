@@ -19,11 +19,11 @@ const (
 )
 
 const (
-	StatusInstalled int = 0
-	StatusChanged   int = 1
-	StatusNoInstall int = 2
-	StatusCached    int = 3
-	StatusFailed    int = 4
+	StatusSynced int = 0
+	StatusChange int = 1
+	StatusNoSync int = 2
+	StatusCached int = 3
+	StatusFailed int = 4
 )
 
 type PlugManager struct {
@@ -76,7 +76,7 @@ func (p *PlugManager) Register(plug *Plug) error {
 	}
 
 	p.Plugs[plug.Name] = plug
-	p.Status[plug.Name] = StatusNoInstall
+	p.Status[plug.Name] = StatusNoSync
 
 	return nil
 }
@@ -113,7 +113,7 @@ func (p *PlugManager) Sync(c *Cli) error {
 			}
 
 			fmt.Fprintf(c.Out, MessageSynced, plug.Name, timeEd.Sub(timeSt))
-			p.Status[plug.Name] = StatusInstalled
+			p.Status[plug.Name] = StatusSynced
 		}(plug)
 	}
 
@@ -221,4 +221,5 @@ func (p *Plug) update() error {
 	}
 
 	return r.VCS.Download(dir)
+
 }
