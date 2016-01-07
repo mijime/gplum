@@ -3,10 +3,19 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"golang.org/x/tools/go/vcs"
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
+)
+
+const (
+	MessageSyncing string = "Sync... %s\n"
+	MessageSynced  string = "Synced! %s (%s)\n"
+	MessageFailed  string = "Failed! %s: %s\n"
 )
 
 const (
@@ -25,6 +34,7 @@ type PlugManager struct {
 
 func NewPlugManager(rootpath string) *PlugManager {
 	root, _ := filepath.Abs(rootpath)
+
 	return &PlugManager{
 		Root:   root,
 		Plugs:  map[string]*Plug{},
@@ -68,6 +78,38 @@ func (p *PlugManager) Register(plug *Plug) error {
 	p.Plugs[plug.Name] = plug
 	p.Status[plug.Name] = StatusNoInstall
 
+	return nil
+}
+
+type Cli struct {
+	In       io.Reader
+	Out, Err io.Writer
+}
+
+func (p *PlugManager) Sync(c *Cli) error {
+	var wg sync.WaitGroup
+
+	for _, plug := range p.Plugs {
+		wg.Add(1)
+
+		go func(p *Plug) {
+			defer wg.Done()
+
+			fmt.Fprintf(c.Out, MessageSyncing, p.Name)
+
+			timeSt := time.Now()
+			err := p.Sync()
+			timeEd := time.Now()
+
+			if err != nil {
+				fmt.Fprintf(c.Err, MessageFailed, p.Name, err)
+			} else {
+				fmt.Fprintf(c.Out, MessageSynced, p.Name, timeEd.Sub(timeSt))
+			}
+		}(plug)
+	}
+
+	wg.Wait()
 	return nil
 }
 

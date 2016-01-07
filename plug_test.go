@@ -45,3 +45,18 @@ func TestPlugManagerRegister(t *testing.T) {
 	plum.ToJSON(stdout)
 	fmt.Println(stdout)
 }
+
+func TestPlugManagerSync(t *testing.T) {
+	stdout := new(bytes.Buffer)
+	c := &Cli{Out: stdout, Err: stdout}
+
+	plum := NewPlugManager("_test")
+
+	plum.Register(&Plug{Repo: "github.com/mijime/sham"})
+	plum.Register(&Plug{Repo: "github.com/mijime/merje"})
+
+	plum.Sync(c)
+
+	plum.ToJSON(c.Out)
+	fmt.Println(stdout)
+}
