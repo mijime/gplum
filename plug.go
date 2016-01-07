@@ -15,7 +15,7 @@ import (
 const (
 	MessageSyncing string = "Sync... %s\n"
 	MessageSynced  string = "Synced! %s (%s)\n"
-	MessageFailed  string = "Failed! %s: %s\n"
+	MessageFailed  string = "Failed! %s (%s) %s\n"
 )
 
 const (
@@ -92,20 +92,28 @@ func (p *PlugManager) Sync(c *Cli) error {
 	for _, plug := range p.Plugs {
 		wg.Add(1)
 
-		go func(p *Plug) {
+		go func(plug *Plug) {
 			defer wg.Done()
 
-			fmt.Fprintf(c.Out, MessageSyncing, p.Name)
+			fmt.Fprintf(c.Out, MessageSyncing, plug.Name)
 
 			timeSt := time.Now()
-			err := p.Sync()
+
+			err := plug.Sync()
+			if err == nil {
+				// err = plug.Do()
+			}
+
 			timeEd := time.Now()
 
 			if err != nil {
-				fmt.Fprintf(c.Err, MessageFailed, p.Name, err)
-			} else {
-				fmt.Fprintf(c.Out, MessageSynced, p.Name, timeEd.Sub(timeSt))
+				fmt.Fprintf(c.Err, MessageFailed, plug.Name, timeEd.Sub(timeSt), err)
+				p.Status[plug.Name] = StatusFailed
+				return
 			}
+
+			fmt.Fprintf(c.Out, MessageSynced, plug.Name, timeEd.Sub(timeSt))
+			p.Status[plug.Name] = StatusInstalled
 		}(plug)
 	}
 
