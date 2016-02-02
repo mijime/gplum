@@ -48,15 +48,35 @@ func TestPlugManagerRegister(t *testing.T) {
 
 func TestPlugManagerSync(t *testing.T) {
 	stdout := new(bytes.Buffer)
-	c := &Cli{Out: stdout, Err: stdout}
+
+	s := make(chan *PlugState)
+	closed := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case state := <-s:
+				if state != nil {
+					fmt.Println(state)
+				}
+
+			case <-closed:
+				return
+			}
+		}
+	}()
 
 	plum := NewPlugManager("_test")
 
 	plum.Register(&Plug{Repo: "github.com/mijime/sham"})
 	plum.Register(&Plug{Repo: "github.com/mijime/merje"})
 
-	plum.Sync(c)
+	plum.Sync(s)
+	closed <- true
 
-	plum.ToJSON(c.Out)
+	close(s)
+	close(closed)
+
+	plum.ToJSON(stdout)
 	fmt.Println(stdout)
 }

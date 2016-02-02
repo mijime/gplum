@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"golang.org/x/tools/go/vcs"
 	"io"
 	"os"
@@ -13,9 +12,10 @@ import (
 )
 
 const (
-	MessageSyncing string = "Sync... %s\n"
-	MessageSynced  string = "Synced! %s (%s)\n"
-	MessageFailed  string = "Failed! %s (%s) %s\n"
+	ProgressSyncing int = 0
+	ProgressDoing   int = 1
+	ProgressSynced  int = 2
+	ProgressFailed  int = 3
 )
 
 const (
@@ -81,12 +81,14 @@ func (p *PlugManager) Register(plug *Plug) error {
 	return nil
 }
 
-type Cli struct {
-	In       io.Reader
-	Out, Err io.Writer
+type PlugState struct {
+	Name     string
+	Progress int
+	Err      error
+	Time     time.Time
 }
 
-func (p *PlugManager) Sync(c *Cli) error {
+func (p *PlugManager) Sync(state chan *PlugState) error {
 	var wg sync.WaitGroup
 
 	for _, plug := range p.Plugs {
@@ -95,24 +97,41 @@ func (p *PlugManager) Sync(c *Cli) error {
 		go func(plug *Plug) {
 			defer wg.Done()
 
-			fmt.Fprintf(c.Out, MessageSyncing, plug.Name)
-
-			timeSt := time.Now()
+			state <- &PlugState{
+				Name:     plug.Name,
+				Progress: ProgressSyncing,
+				Err:      nil,
+				Time:     time.Now(),
+			}
 
 			err := plug.Sync()
 			if err == nil {
+				state <- &PlugState{
+					Name:     plug.Name,
+					Progress: ProgressDoing,
+					Err:      nil,
+					Time:     time.Now(),
+				}
 				// err = plug.Do()
 			}
 
-			timeEd := time.Now()
-
 			if err != nil {
-				fmt.Fprintf(c.Err, MessageFailed, plug.Name, timeEd.Sub(timeSt), err)
+				state <- &PlugState{
+					Name:     plug.Name,
+					Progress: ProgressFailed,
+					Err:      err,
+					Time:     time.Now(),
+				}
 				p.Status[plug.Name] = StatusFailed
 				return
 			}
 
-			fmt.Fprintf(c.Out, MessageSynced, plug.Name, timeEd.Sub(timeSt))
+			state <- &PlugState{
+				Name:     plug.Name,
+				Progress: ProgressSynced,
+				Err:      nil,
+				Time:     time.Now(),
+			}
 			p.Status[plug.Name] = StatusSynced
 		}(plug)
 	}
